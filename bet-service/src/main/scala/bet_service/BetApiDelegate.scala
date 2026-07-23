@@ -1,0 +1,59 @@
+package bet_service
+
+import cats.effect.IO
+import cats.syntax.all.*
+import fs2.kafka.KafkaProducer
+import org.http4s.{Request, Response}
+
+import bet_service.generated.server.apis.DefaultApiDelegate
+import bet_service.generated.server.apis.DefaultApiDelegate.*
+import bet_service.generated.server.models.{Bet as GenBet, PlaceBetRequest as GenPlaceBetRequest, ErrorResponse as GenErrorResponse}
+
+import java.time.ZoneOffset
+
+final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, String])
+  extends DefaultApiDelegate[IO]:
+
+  private def toGenBet(bet: Bet): GenBet =
+    GenBet(
+      id = bet.id,
+      eventUnderscoreid = bet.eventId,
+      stake = bet.stake.toDouble,
+      odds = bet.odds.toDouble,
+      createdUnderscoreat = bet.createdAt.atZone(ZoneOffset.UTC) // Instant -> ZonedDateTime, generatorul cere ZonedDateTime nu Instant
+    )
+
+  private def toGenError(err: BetError): GenErrorResponse =
+    GenErrorResponse(error = err.message)
+
+  override def getBet: getBet = new getBet:
+    def handle(req: Request[IO], id: java.util.UUID, responses: getBetResponses[IO]): IO[Response[IO]] =
+      repo.findById(id).flatMap:
+        case Left(err @ BetError.NotFound(_)) => responses.resp404(toGenError(err))
+        case Left(err)                        => responses.resp500(toGenError(err))
+        case Right(bet)                       => responses.resp200(toGenBet(bet))
+
+  override def getHealth: getHealth = new getHealth:
+    def handle(req: Request[IO], responses: getHealthResponses[IO]): IO[Response[IO]] =
+      responses.resp200()
+
+  override def listBets: listBets = new listBets:
+    def handle(req: Request[IO], responses: listBetsResponses[IO]): IO[Response[IO]] =
+      repo.findAll().flatMap:
+        case Left(err)   => responses.resp500(toGenError(err))
+        case Right(bets) => responses.resp200(bets.map(toGenBet))
+
+  override def placeBet: placeBet = new placeBet:
+    def handle(req: Request[IO], placeBetIO: IO[GenPlaceBetRequest], responses: placeBetResponses[IO]): IO[Response[IO]] =
+      placeBetIO.attempt.flatMap:
+        case Left(_) =>
+          responses.resp422(GenErrorResponse(error = "invalid request body"))
+        case Right(body) =>
+          Bet.create(body.eventUnderscoreid, BigDecimal(body.stake), BigDecimal(body.odds)) match
+            case Left(err) =>
+              responses.resp422(toGenError(err))
+            case Right(bet) =>
+              repo.insert(bet).flatMap:
+                case Left(err) => responses.resp500(toGenError(err))
+                case Right(saved) =>
+                  BetEventProducer.publish(producer, saved) *> responses.resp201(toGenBet(saved))

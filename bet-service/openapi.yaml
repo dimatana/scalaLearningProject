@@ -1,0 +1,123 @@
+openapi: "3.0.3"
+info:
+  title: Bet API
+  version: "1.0.0"
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      responses:
+        "200":
+          description: ok
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /bets:
+    get:
+      operationId: listBets
+      summary: List all bets
+      responses:
+        "200":
+          description: list of bets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bet"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: placeBet
+      summary: Place a bet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceBetRequest"
+      responses:
+        "201":
+          description: bet placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bet"
+        "422":
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bets/{id}:
+    get:
+      operationId: getBet
+      summary: Get a bet by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: bet found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bet"
+        "404":
+          description: bet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    PlaceBetRequest:
+      type: object
+      required: [event_id, stake, odds]
+      properties:
+        event_id: { type: string, format: uuid }
+        stake:    { type: number, format: double }
+        odds:     { type: number, format: double }
+
+    Bet:
+      type: object
+      required: [id, event_id, stake, odds, created_at]
+      properties:
+        id:         { type: string, format: uuid }
+        event_id:   { type: string, format: uuid }
+        stake:      { type: number, format: double }
+        odds:       { type: number, format: double }
+        created_at: { type: string, format: date-time }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
