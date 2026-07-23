@@ -1,0 +1,98 @@
+services:
+  db:
+    image: postgres:16
+    container_name: db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: redpanda
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --mode
+      - dev-container
+      - --overprovisioned
+    ports:
+      - "19092:19092"
+      - "18082:18082"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redpanda-console:
+    image: redpandadata/console:latest
+    container_name: redpanda-console
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
+  openapi-generator-ping:
+    image: openapitools/openapi-generator-cli:latest
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      openapi-generator-cli generate -i openapi.yaml -g scala-http4s -o generated/server --additional-properties=packageName=ping.server,packageVersion=1.0.0
+
+  openapi-generator-ping-client:
+    image: openapitools/openapi-generator-cli:latest
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      openapi-generator-cli generate -i openapi.yaml -g scala-sttp -o generated/client --additional-properties=packageName=org.openapitools.client,packageVersion=1.0.0
+
+volumes:
+  pg-data:
+  redpanda-data:
