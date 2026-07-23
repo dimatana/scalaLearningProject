@@ -81,29 +81,32 @@ services:
   openapi-generator-bet-server:
     image: openapitools/openapi-generator-cli:latest
     volumes:
-        - .:/app
+      - .:/app
     working_dir: /app
     command: >
+      sh -lc "
       openapi-generator-cli generate
       -i bet-service/openapi.yaml
       -g scala-http4s-server
       -o bet-service/generated/server
       --additional-properties=packageName=bet_service.generated.server,packageVersion=1.0.0,excludeSbt=true
-          && rm -f bet-service/generated/server/build.sbt
-          "
+      && sh bet-service/scripts/fix-generated-server-models.sh
+      && rm -f bet-service/generated/server/build.sbt
+      "
   openapi-generator-bet-client:
     image: openapitools/openapi-generator-cli:latest
     volumes:
       - .:/app
     working_dir: /app
     command: >
+      sh -lc "
       openapi-generator-cli generate
       -i bet-service/openapi.yaml
       -g scala-sttp
       -o bet-service/generated/client
       --additional-properties=packageName=bet_service.generated.client,packageVersion=1.0.0
-          && rm -f bet-service/generated/client/build.sbt
-          "
+      && rm -f bet-service/generated/client/build.sbt
+      "
 volumes:
   pg-data:
   redpanda-data:
