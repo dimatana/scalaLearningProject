@@ -50,11 +50,9 @@ lazy val betServiceGeneratedServer = (project in file("bet-service/generated/ser
       "eu.timepit"     %% "refined"       % "0.11.2"
     )
   )
-lazy val betServiceGeneratedClient = (project in file("bet-service/generated/client"))
-
 lazy val betService = (project in file("bet-service"))
   .dependsOn(contracts, betServiceGeneratedServer)
-  .aggregate(betServiceGeneratedServer, betServiceGeneratedClient)
+  .aggregate(betServiceGeneratedServer)
   .settings(
     name := "bet-service",
     Compile / mainClass := Some("bet_service.Main"),

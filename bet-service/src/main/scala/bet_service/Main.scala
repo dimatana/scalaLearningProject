@@ -17,7 +17,6 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import bet_service.generated.server.apis.DefaultApiRoutes
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path, Paths}
 
 object Main extends IOApp.Simple:
 
@@ -51,27 +50,16 @@ object Main extends IOApp.Simple:
       case BetError.InvalidOdds(_)       => UnprocessableEntity(ErrorResponse(err.message))
       case BetError.RepositoryFailure(_) => InternalServerError(ErrorResponse(err.message))
 
-  private def resolveExistingPath(fileName: String): IO[Path] =
+  private def readResource(resourcePath: String): IO[String] =
     IO.blocking {
-      val candidates = List(
-        Paths.get("bet-service", fileName),
-        Paths.get(fileName)
-      )
-      candidates.find(Files.exists(_)).getOrElse {
-        throw new IllegalStateException(
-          s"Missing file '$fileName'. Tried: ${candidates.map(_.toString).mkString(", ")}"
-        )
-      }
+      val stream = Option(getClass.getClassLoader.getResourceAsStream(resourcePath))
+        .getOrElse(throw new IllegalStateException(s"Missing classpath resource: $resourcePath"))
+      try new String(stream.readAllBytes(), StandardCharsets.UTF_8)
+      finally stream.close()
     }
 
-  private def readTextFile(path: Path): IO[String] =
-    IO.blocking(Files.readString(path, StandardCharsets.UTF_8))
-
-  private def readSpec: IO[String] =
-    resolveExistingPath("openapi.yaml").flatMap(readTextFile)
-
-  private def readSwaggerHtml: IO[String] =
-    resolveExistingPath("swagger-ui.html").flatMap(readTextFile)
+  private def readSpec: IO[String]        = readResource("static/openapi.yaml")
+  private def readSwaggerHtml: IO[String] = readResource("static/swagger-ui.html")
 
   private val docsRoutes: HttpRoutes[IO] =
     HttpRoutes.of[IO]:
