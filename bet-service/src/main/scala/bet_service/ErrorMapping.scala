@@ -1,6 +1,5 @@
 package bet_service
 
-import bet_service.BetError
 import org.http4s.Status
 
 
