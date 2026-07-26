@@ -43,13 +43,6 @@ object Main extends IOApp.Simple:
         .migrate()
     }.void
 
-  private def errorResponse(err: BetError): IO[Response[IO]] =
-    err match
-      case BetError.NotFound(_)          => NotFound(ErrorResponse(err.message))
-      case BetError.InvalidStake(_)      => UnprocessableEntity(ErrorResponse(err.message))
-      case BetError.InvalidOdds(_)       => UnprocessableEntity(ErrorResponse(err.message))
-      case BetError.RepositoryFailure(_) => InternalServerError(ErrorResponse(err.message))
-
   private def readResource(resourcePath: String): IO[String] =
     IO.blocking {
       val stream = Option(getClass.getClassLoader.getResourceAsStream(resourcePath))
