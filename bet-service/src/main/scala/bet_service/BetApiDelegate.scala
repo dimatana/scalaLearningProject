@@ -4,6 +4,7 @@ import cats.effect.IO
 import cats.syntax.all.*
 import fs2.kafka.KafkaProducer
 import org.http4s.{Request, Response, Status}
+import contracts.BetPlaced
 
 import bet_service.generated.server.apis.DefaultApiDelegate
 import bet_service.generated.server.apis.DefaultApiDelegate.*
@@ -11,7 +12,7 @@ import bet_service.generated.server.models.{Bet as GenBet, PlaceBetRequest as Ge
 
 import java.time.ZoneOffset
 
-final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, String])
+final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String)
   extends DefaultApiDelegate[IO]:
 
   private def toGenBet(bet: Bet): GenBet =
@@ -60,4 +61,4 @@ final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, Stri
               repo.insert(bet).flatMap:
                 case Left(err) => responses.resp500(toGenError(err))
                 case Right(saved) =>
-                  BetEventProducer.publish(producer, saved) *> responses.resp201(toGenBet(saved))
+                  BetEventProducer.publish(producer, saved, betPlacedTopic) *> responses.resp201(toGenBet(saved))

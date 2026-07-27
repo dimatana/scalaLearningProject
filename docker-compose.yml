@@ -107,6 +107,25 @@ services:
       --additional-properties=packageName=bet_service.generated.client,packageVersion=1.0.0
       && rm -f bet-service/generated/client/build.sbt
       "
+
+  bet-service:
+    build:
+      context: .
+      dockerfile: bet-service/Dockerfile
+    container_name: bet-service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - BET_SERVICE_DB_URL=jdbc:postgresql://db:5432/postgres
+      - BET_SERVICE_DB_USER=postgres
+      - BET_SERVICE_DB_PASSWORD=postgres
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      db:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
 volumes:
   pg-data:
   redpanda-data:

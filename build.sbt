@@ -1,9 +1,10 @@
 import sbt.Keys.testFrameworks
+import sbtassembly.MergeStrategy
 
 ThisBuild / scalaVersion := "3.8.4"
-
 val http4sVersion = "0.23.30"
 val circeVersion  = "0.14.10"
+val fs2KafkaVersion = "3.5.1"
 
 val commonDeps = Seq(
   "org.typelevel"  %% "cats-effect"         % "3.5.7",
@@ -21,7 +22,9 @@ val commonDeps = Seq(
   "org.flywaydb"   %  "flyway-core"         % "10.15.0",
   "org.flywaydb"   %  "flyway-database-postgresql" % "10.15.0",
   "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
-  "com.github.fd4s" %% "fs2-kafka"          % "3.6.0",
+  "com.github.fd4s" %% "fs2-kafka"          % fs2KafkaVersion,
+  "io.circe" %% "circe-core" % circeVersion,
+  "io.circe" %% "circe-generic" % circeVersion,
   "org.scalameta"  %% "munit"               % "1.0.0"  % Test,
   "org.typelevel"  %% "munit-cats-effect"   % "2.2.0"  % Test
 )
@@ -43,7 +46,7 @@ lazy val betServiceGeneratedServer = (project in file("bet-service/generated/ser
       "org.http4s"     %% "http4s-dsl"    % http4sVersion,
       "org.http4s"     %% "http4s-circe"  % http4sVersion,
       "org.http4s"     %% "http4s-core"   % http4sVersion,
-      "org.http4s"     %% "http4s-server" % http4sVersion, // <-- ADAUGAT
+      "org.http4s"     %% "http4s-server" % http4sVersion,
       "io.circe"       %% "circe-core"    % circeVersion,
       "io.circe"       %% "circe-generic" % circeVersion,
       "io.circe"       %% "circe-refined" % "0.14.5",
@@ -57,9 +60,21 @@ lazy val betService = (project in file("bet-service"))
     name := "bet-service",
     Compile / mainClass := Some("bet_service.Main"),
     Compile / run / fork := true,
-    libraryDependencies ++= commonDeps
+    libraryDependencies ++= commonDeps,
+    assembly / assemblyMergeStrategy := {
+      case x if x.endsWith("module-info.class") => MergeStrategy.discard
+      case PathList("META-INF", "versions", _, "module-info.class") => MergeStrategy.discard
+      case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+      case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
+      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case "application.conf" => MergeStrategy.concat
+      case "reference.conf"   => MergeStrategy.concat
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    }
   )
-
 lazy val tradingServiceGeneratedServer = (project in file("trading-service/generated/server"))
 lazy val tradingServiceGeneratedClient = (project in file("trading-service/generated/client"))
 
