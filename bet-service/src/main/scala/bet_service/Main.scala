@@ -17,6 +17,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import bet_service.generated.server.apis.DefaultApiRoutes
 import java.nio.charset.StandardCharsets
+import contracts.BetPlaced
 
 object Main extends IOApp.Simple:
 
@@ -69,8 +70,8 @@ object Main extends IOApp.Simple:
             .withEntity(html)(using EntityEncoder.stringEncoder[IO])
             .putHeaders(Header.Raw(org.typelevel.ci.CIString("Content-Type"), "text/html; charset=utf-8"))
         )
-  private def routes(repo: BetRepository, producer: KafkaProducer[IO, String, String]): HttpRoutes[IO] =
-    DefaultApiRoutes(BetApiDelegate(repo, producer)).routes <+> docsRoutes
+  private def routes(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String): HttpRoutes[IO] =
+    DefaultApiRoutes(BetApiDelegate(repo, producer, betPlacedTopic)).routes <+> docsRoutes
 
 
   val run: IO[Unit] =
@@ -79,7 +80,7 @@ object Main extends IOApp.Simple:
       val repo = BetRepository(xa)
       for
         _ <- runMigrations(config)
-        httpApp = CORS.policy.withAllowOriginAll(routes(repo, producer)).orNotFound
+        httpApp = CORS.policy.withAllowOriginAll(routes(repo, producer, config.betPlacedTopic)).orNotFound
         _ <- EmberServerBuilder
           .default[IO]
           .withHost(host"0.0.0.0")
