@@ -4,6 +4,8 @@ import cats.effect.{IO, Resource}
 import cats.syntax.all.*
 import contracts.BetPlaced
 import fs2.kafka.*
+import org.typelevel.log4cats.Logger
+
 import java.time.Instant
 
 object BetEventProducer:
@@ -12,10 +14,13 @@ object BetEventProducer:
     ProducerSettings[IO, String, BetPlaced]
       .withBootstrapServers(brokers)
 
-  def make(brokers: String): Resource[IO, KafkaProducer[IO, String, BetPlaced]] =
+  def make(brokers: String)(using logger: Logger[IO]): Resource[IO, KafkaProducer[IO, String, BetPlaced]] =
     KafkaProducer[IO].resource(producerSettings(brokers))
+      .evalTap(_ => logger.info("acquire: kafka producer"))
+      .onFinalize(logger.info("release: kafka producer"))
 
-  def publish(producer: KafkaProducer[IO, String, BetPlaced], bet: Bet, topic: String): IO[Unit] =
+
+  def publish(producer: KafkaProducer[IO, String, BetPlaced], bet: Bet, topic: String)(using logger: Logger[IO]): IO[Unit] =
     val event = BetPlaced(
       betId = bet.id,
       eventId = bet.eventId,
@@ -26,4 +31,5 @@ object BetEventProducer:
     val record = ProducerRecords.one(
       ProducerRecord(topic, bet.eventId.toString, event)
     )
-    producer.produce(record).flatten.void
+    producer.produce(record).flatten.void *>
+      logger.info(s"published BetPlaced event: betId=${bet.id}, topic=$topic")

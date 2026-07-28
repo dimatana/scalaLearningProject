@@ -35,6 +35,7 @@ lazy val contracts = (project in file("contracts"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core"    % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser"  % circeVersion,
       "org.scalameta" %% "munit" % "1.0.0" % Test
     )
   )

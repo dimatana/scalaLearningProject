@@ -1,16 +1,21 @@
 package bet_service
 
 import pureconfig.ConfigReader
-import pureconfig.generic.derivation.default.* 
-  
+import pureconfig.generic.derivation.default.*
+import scala.concurrent.duration.FiniteDuration
+
 final case class AppConfig(
-   httpPort: Int,
-   dbUrl: String,
-   dbUser: String,
-   dbPassword: String,
-   kafkaBrokers: String,
-   betPlacedTopic: String
-) derives ConfigReader
+    httpPort: Int,
+    httpShutdownTimeout: FiniteDuration,
+    dbUrl: String,
+    dbUser: String,
+    dbPassword: String,
+    dbMaxPoolSize: Int,
+    dbMinIdle: Int,
+    dbConnectionTimeout: FiniteDuration,
+    kafkaBrokers: String,
+    betPlacedTopic: String
+  ) derives ConfigReader
 
 object AppConfig:
   def load(): AppConfig =
