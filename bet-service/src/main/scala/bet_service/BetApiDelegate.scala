@@ -5,6 +5,7 @@ import cats.syntax.all.*
 import fs2.kafka.KafkaProducer
 import org.http4s.{Request, Response, Status}
 import contracts.BetPlaced
+import org.typelevel.log4cats.Logger
 
 import bet_service.generated.server.apis.DefaultApiDelegate
 import bet_service.generated.server.apis.DefaultApiDelegate.*
@@ -12,7 +13,7 @@ import bet_service.generated.server.models.{Bet as GenBet, PlaceBetRequest as Ge
 
 import java.time.ZoneOffset
 
-final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String)
+final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String)(using logger: Logger[IO])
   extends DefaultApiDelegate[IO]:
 
   private def toGenBet(bet: Bet): GenBet =

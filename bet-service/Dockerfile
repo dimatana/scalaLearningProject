@@ -1,3 +1,14 @@
+FROM openapitools/openapi-generator-cli:latest AS openapi-generator
+WORKDIR /app
+COPY . .
+RUN openapi-generator-cli generate \
+      -i bet-service/openapi.yaml \
+      -g scala-http4s-server \
+      -o bet-service/generated/server \
+      --additional-properties=packageName=bet_service.generated.server,packageVersion=1.0.0,excludeSbt=true \
+    && sh bet-service/scripts/fix-generated-server-models.sh \
+    && rm -f bet-service/generated/server/build.sbt
+
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
@@ -8,6 +19,7 @@ RUN apt-get update && apt-get install -y curl gnupg && \
     apt-get update && apt-get install -y sbt
 
 COPY . .
+COPY --from=openapi-generator /app/bet-service/generated/server bet-service/generated/server
 RUN sbt betService/assembly
 
 FROM eclipse-temurin:21-jre
