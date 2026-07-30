@@ -77,18 +77,44 @@ lazy val betService = (project in file("bet-service"))
     }
   )
 lazy val tradingServiceGeneratedServer = (project in file("trading-service/generated/server"))
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel"  %% "cats-effect"  % "3.5.7",
+      "org.http4s"     %% "http4s-dsl"    % http4sVersion,
+      "org.http4s"     %% "http4s-circe"  % http4sVersion,
+      "org.http4s"     %% "http4s-core"   % http4sVersion,
+      "org.http4s"     %% "http4s-server" % http4sVersion,
+      "io.circe"       %% "circe-core"    % circeVersion,
+      "io.circe"       %% "circe-generic" % circeVersion,
+      "io.circe"       %% "circe-refined" % "0.14.5",
+      "eu.timepit"     %% "refined"       % "0.11.2"
+    )
+  )
+
 lazy val tradingServiceGeneratedClient = (project in file("trading-service/generated/client"))
 
 lazy val tradingService = (project in file("trading-service"))
   .dependsOn(contracts, tradingServiceGeneratedServer)
-  .aggregate(tradingServiceGeneratedServer, tradingServiceGeneratedClient)
+  .aggregate(tradingServiceGeneratedServer)
   .settings(
     name := "trading-service",
     Compile / mainClass := Some("trading_service.Main"),
     Compile / run / fork := true,
-    libraryDependencies ++= commonDeps
+    libraryDependencies ++= commonDeps,
+    assembly / assemblyMergeStrategy := {
+      case x if x.endsWith("module-info.class") => MergeStrategy.discard
+      case PathList("META-INF", "versions", _, "module-info.class") => MergeStrategy.discard
+      case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+      case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
+      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case "application.conf" => MergeStrategy.concat
+      case "reference.conf"   => MergeStrategy.concat
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    }
   )
-
 lazy val root = (project in file("."))
   .aggregate(contracts, betService, tradingService)
   .settings(

@@ -126,6 +126,75 @@ services:
         condition: service_healthy
       redpanda:
         condition: service_healthy
+
+  # --- trading-db ---
+  trading-db:
+    image: postgres:16
+    container_name: trading-db
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tradingdb
+    volumes:
+      - trading-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # --- trading-service ---
+  openapi-generator-trading-server:
+    image: openapitools/openapi-generator-cli:latest
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -lc "
+      openapi-generator-cli generate
+      -i trading-service/openapi.yaml
+      -g scala-http4s-server
+      -o trading-service/generated/server
+      --additional-properties=packageName=trading_service.generated.server,packageVersion=1.0.0,excludeSbt=true
+      && rm -f trading-service/generated/server/build.sbt
+      "
+
+  openapi-generator-trading-client:
+    image: openapitools/openapi-generator-cli:latest
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -lc "
+      openapi-generator-cli generate
+      -i trading-service/openapi.yaml
+      -g scala-sttp
+      -o trading-service/generated/client
+      --additional-properties=packageName=trading_service.generated.client,packageVersion=1.0.0
+      && rm -f trading-service/generated/client/build.sbt
+      "      
+
+  trading-service:
+    build:
+      context: .
+      dockerfile: trading-service/Dockerfile
+    container_name: trading-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - TRADING_SERVICE_DB_URL=jdbc:postgresql://trading-db:5432/tradingdb
+      - TRADING_SERVICE_DB_USER=postgres
+      - TRADING_SERVICE_DB_PASSWORD=postgres
+    depends_on:
+      trading-db:
+        condition: service_healthy
+
 volumes:
   pg-data:
   redpanda-data:
+  trading-pg-data:
