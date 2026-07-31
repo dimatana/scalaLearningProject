@@ -2,6 +2,7 @@ package trading_service
 
 import cats.MonoidK.ops.toAllMonoidKOps
 import cats.effect.{IO, IOApp, Resource}
+import cats.implicits.catsSyntaxTuple2Semigroupal
 import com.comcast.ip4s.*
 import doobie.hikari.HikariTransactor
 import org.flywaydb.core.Flyway
@@ -76,12 +77,17 @@ object Main extends IOApp.Simple:
     val config = AppConfig.load()
     makeTransactor(config).use { xa =>
       val repo = EventRepository(xa)
+      val consumerStream = BetPlacedConsumer.stream(
+        config.kafkaBrokers, config.kafkaGroupId, config.kafkaTopic, repo
+      )
       for
         _ <- runMigrations(config)
         httpApp = RequestLogger.httpApp(logHeaders = true, logBody = false)(
           CORS.policy.withAllowOriginAll(routes(repo)).orNotFound
         )
-        _ <- EmberServerBuilder
+        _ <- (
+          consumerStream.compile.drain.background,
+          EmberServerBuilder
           .default[IO]
           .withHost(host"0.0.0.0")
           .withPort(Port.fromInt(config.httpPort).getOrElse(port"3001"))
@@ -89,6 +95,6 @@ object Main extends IOApp.Simple:
           .build
           .evalTap(srv => summon[Logger[IO]].info(s"acquire: http server bound at ${srv.address}"))
           .onFinalize(summon[Logger[IO]].info("release: http server"))
-          .useForever
+        ).tupled.useForever
       yield ()
     }

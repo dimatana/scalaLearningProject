@@ -26,8 +26,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
       responses:
         "200":
           description: event found
@@ -54,7 +54,7 @@ components:
       type: object
       required: [eventId, name, betsPlaced]
       properties:
-        eventId:    { type: integer, format: int64 }
+        eventId:    { type: string, format: uuid }
         name:       { type: string }
         betsPlaced: { type: integer, format: int32, default: 0 }
 

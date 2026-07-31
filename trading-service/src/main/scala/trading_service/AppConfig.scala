@@ -13,6 +13,9 @@ final case class AppConfig(
     dbMaxPoolSize: Int,
     dbMinIdle: Int,
     dbConnectionTimeout: FiniteDuration,
+    kafkaBrokers: String,
+    kafkaGroupId: String,
+    kafkaTopic: String,                      
 ) derives ConfigReader
 
 object AppConfig:
