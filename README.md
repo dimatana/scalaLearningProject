@@ -83,24 +83,48 @@ docker compose down -v
 
 ## Running services locally (sbt / IntelliJ)
 
-1. **Start only infrastructure in Docker:**
+1. **Regenerate OpenAPI artifacts (server + client for both services):**
    ```bash
-   docker compose up -d db trading-db redpanda
+   docker compose run --rm openapi-generator-bet-server
+   docker compose run --rm openapi-generator-bet-client
+   docker compose run --rm openapi-generator-trading-server
+   docker compose run --rm openapi-generator-trading-client
    ```
 
-2. **Run `bet-service`:**
+2. **Start only infrastructure in Docker:**
    ```bash
+   docker compose up -d db trading-db redpanda redpanda-console adminer
+   ```
+
+3. **Run `bet-service` with env vars (terminal):**
+   ```bash
+   BET_SERVICE_DB_URL=jdbc:postgresql://localhost:5433/postgres \
+   BET_SERVICE_DB_USER=postgres \
+   BET_SERVICE_DB_PASSWORD=postgres \
+   KAFKA_BROKERS=localhost:19092 \
    sbt betService/run
    ```
-   Default config already points to `localhost:5433` and `localhost:19092` — no env
-   vars needed.
 
-3. **Run `trading-service`:**
+4. **Run `trading-service` with env vars (terminal):**
    ```bash
-   KAFKA_BROKERS=localhost:19092 sbt tradingService/run
+   TRADING_SERVICE_DB_URL=jdbc:postgresql://localhost:5434/tradingdb \
+   TRADING_SERVICE_DB_USER=postgres \
+   TRADING_SERVICE_DB_PASSWORD=postgres \
+   KAFKA_BROKERS=localhost:19092 \
+   KAFKA_GROUP_ID=trading-service-group \
+   KAFKA_TOPIC=bets.placed \
+   sbt tradingService/run
    ```
-   The `KAFKA_BROKERS` override is needed because the default in `application.conf`
-   uses port `19092` (Redpanda's external listener).
+
+5. **Equivalent IntelliJ Environment Variables:**
+   - `bet-service`:
+     ```text
+     BET_SERVICE_DB_URL=jdbc:postgresql://localhost:5433/postgres;BET_SERVICE_DB_USER=postgres;BET_SERVICE_DB_PASSWORD=postgres;KAFKA_BROKERS=localhost:19092
+     ```
+   - `trading-service`:
+     ```text
+     TRADING_SERVICE_DB_URL=jdbc:postgresql://localhost:5434/tradingdb;TRADING_SERVICE_DB_USER=postgres;TRADING_SERVICE_DB_PASSWORD=postgres;KAFKA_BROKERS=localhost:19092;KAFKA_GROUP_ID=trading-service-group;KAFKA_TOPIC=bets.placed
+     ```
 
 ## Manual demo — full round-trip
 
