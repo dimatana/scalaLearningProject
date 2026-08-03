@@ -1,7 +1,6 @@
 package bet_service
 
 import cats.effect.IO
-import cats.syntax.all.*
 import fs2.kafka.KafkaProducer
 import org.http4s.{Request, Response, Status}
 import contracts.BetPlaced
@@ -9,11 +8,19 @@ import org.typelevel.log4cats.Logger
 
 import bet_service.generated.server.apis.DefaultApiDelegate
 import bet_service.generated.server.apis.DefaultApiDelegate.*
-import bet_service.generated.server.models.{Bet as GenBet, PlaceBetRequest as GenPlaceBetRequest, ErrorResponse as GenErrorResponse}
+import bet_service.generated.server.models.{
+  Bet as GenBet,
+  PlaceBetRequest as GenPlaceBetRequest,
+  ErrorResponse as GenErrorResponse
+}
 
 import java.time.ZoneOffset
 
-final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String)(using logger: Logger[IO])
+final class BetApiDelegate(
+  repo: BetRepository,
+  producer: KafkaProducer[IO, String, BetPlaced],
+  betPlacedTopic: String
+)(using logger: Logger[IO])
   extends DefaultApiDelegate[IO]:
 
   private def toGenBet(bet: Bet): GenBet =
@@ -35,7 +42,7 @@ final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, Stri
         case Left(err) =>
           ErrorMapping.toStatus(err) match
             case Status.NotFound => responses.resp404(toGenError(err))
-            case _                => responses.resp500(toGenError(err))
+            case _               => responses.resp500(toGenError(err))
 
   override def getHealth: getHealth = new getHealth:
     def handle(req: Request[IO], responses: getHealthResponses[IO]): IO[Response[IO]] =
@@ -48,7 +55,11 @@ final class BetApiDelegate(repo: BetRepository, producer: KafkaProducer[IO, Stri
         case Left(err)   => responses.resp500(toGenError(err))
 
   override def placeBet: placeBet = new placeBet:
-    def handle(req: Request[IO], placeBetIO: IO[GenPlaceBetRequest], responses: placeBetResponses[IO]): IO[Response[IO]] =
+    def handle(
+      req: Request[IO],
+      placeBetIO: IO[GenPlaceBetRequest],
+      responses: placeBetResponses[IO]
+    ): IO[Response[IO]] =
       placeBetIO.attempt.flatMap:
         case Left(_) =>
           responses.resp422(GenErrorResponse(error = "invalid request body"))

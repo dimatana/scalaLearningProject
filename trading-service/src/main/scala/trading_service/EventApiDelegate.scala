@@ -20,9 +20,9 @@ final class EventApiDelegate(repo: EventRepository)(using logger: Logger[IO])
     def handle(req: Request[IO], id: UUID, responses: getEventResponses[IO]): IO[Response[IO]] =
       logger.info(s"GET /events/$id") *>
         repo.findById(id).flatMap:
-          case Right(event)               => responses.resp200(toGenEvent(event))
+          case Right(event)                 => responses.resp200(toGenEvent(event))
           case Left(_: EventError.NotFound) => responses.resp404(GenErrorResponse(s"Event $id not found"))
-          case Left(err)                  => responses.resp500(GenErrorResponse(err.message))
+          case Left(err)                    => responses.resp500(GenErrorResponse(err.message))
 
   override def getHealth: getHealth = new getHealth:
     def handle(req: Request[IO], responses: getHealthResponses[IO]): IO[Response[IO]] =

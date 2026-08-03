@@ -2,21 +2,21 @@ package bet_service
 
 import java.time.Instant
 import java.util.UUID
-import cats.syntax.either.*
 import io.circe.Encoder
-import io.circe.generic.semiauto.{deriveEncoder, deriveDecoder}
+import io.circe.generic.semiauto.deriveEncoder
 
 final case class Bet(
-    id: UUID,
-    eventId: UUID,
-    stake: BigDecimal,
-    odds: BigDecimal,
-    createdAt: Instant
+  id: UUID,
+  eventId: UUID,
+  stake: BigDecimal,
+  odds: BigDecimal,
+  createdAt: Instant
 )
 
 object Bet:
   given Encoder[Bet] = deriveEncoder
-  def create(eventId: UUID, stake: BigDecimal, odds: BigDecimal): Either[BetError, Bet] = 
+
+  def create(eventId: UUID, stake: BigDecimal, odds: BigDecimal): Either[BetError, Bet] =
     for
       validStake <- Either.cond(stake > 0, stake, BetError.InvalidStake("stake must be positive"))
       validOdds  <- Either.cond(odds > 1.0, odds, BetError.InvalidOdds("odds must be greater than 1.0"))
@@ -26,4 +26,4 @@ object Bet:
       stake = validStake,
       odds = validOdds,
       createdAt = Instant.now()
-  )
+    )

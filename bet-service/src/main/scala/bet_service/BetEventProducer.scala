@@ -1,7 +1,6 @@
 package bet_service
 
 import cats.effect.{IO, Resource}
-import cats.syntax.all.*
 import contracts.BetPlaced
 import fs2.kafka.*
 import org.typelevel.log4cats.Logger
@@ -19,8 +18,9 @@ object BetEventProducer:
       .evalTap(_ => logger.info("acquire: kafka producer"))
       .onFinalize(logger.info("release: kafka producer"))
 
-
-  def publish(producer: KafkaProducer[IO, String, BetPlaced], bet: Bet, topic: String)(using logger: Logger[IO]): IO[Unit] =
+  def publish(producer: KafkaProducer[IO, String, BetPlaced], bet: Bet, topic: String)(using
+    logger: Logger[IO]
+  ): IO[Unit] =
     val event = BetPlaced(
       betId = bet.id,
       eventId = bet.eventId,

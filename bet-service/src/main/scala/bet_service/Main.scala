@@ -7,11 +7,9 @@ import doobie.hikari.HikariTransactor
 import fs2.kafka.KafkaProducer
 import org.flywaydb.core.Flyway
 import org.http4s.*
-import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
-import org.http4s.server.middleware.CORS
 import org.typelevel.log4cats.Logger
 import org.http4s.server.middleware.{CORS, Logger as RequestLogger}
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -30,7 +28,7 @@ object Main extends IOApp.Simple:
       hc.setJdbcUrl(config.dbUrl)
       hc.setUsername(config.dbUser)
       hc.setPassword(config.dbPassword)
-      hc.setMaximumPoolSize(config.dbMaxPoolSize) 
+      hc.setMaximumPoolSize(config.dbMaxPoolSize)
       hc.setMinimumIdle(config.dbMinIdle)
       hc.setConnectionTimeout(config.dbConnectionTimeout.toMillis)
       hc
@@ -44,6 +42,7 @@ object Main extends IOApp.Simple:
       Flyway
         .configure()
         .dataSource(config.dbUrl, config.dbUser, config.dbPassword)
+        .baselineOnMigrate(true)
         .load()
         .migrate()
     }.void
@@ -75,7 +74,12 @@ object Main extends IOApp.Simple:
             .withEntity(html)(using EntityEncoder.stringEncoder[IO])
             .putHeaders(Header.Raw(org.typelevel.ci.CIString("Content-Type"), "text/html; charset=utf-8"))
         )
-  private def routes(repo: BetRepository, producer: KafkaProducer[IO, String, BetPlaced], betPlacedTopic: String): HttpRoutes[IO] =
+
+  private def routes(
+    repo: BetRepository,
+    producer: KafkaProducer[IO, String, BetPlaced],
+    betPlacedTopic: String
+  ): HttpRoutes[IO] =
     DefaultApiRoutes(BetApiDelegate(repo, producer, betPlacedTopic)).routes <+> docsRoutes
 
   val run: IO[Unit] =

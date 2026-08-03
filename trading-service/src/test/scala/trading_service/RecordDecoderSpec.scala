@@ -1,7 +1,6 @@
 package trading_service
 
 import munit.FunSuite
-import contracts.BetPlaced
 
 import java.util.UUID
 
@@ -23,7 +22,7 @@ class RecordDecoderSpec extends FunSuite:
 
     RecordDecoder.decodeRecord(bytes) match
       case Left(_: DecodeError.InvalidJson) => ()
-      case other => fail(s"expected Left(InvalidJson), got $other")
+      case other                            => fail(s"expected Left(InvalidJson), got $other")
   }
 
   test("empty payload returns Left(EmptyPayload)") {
