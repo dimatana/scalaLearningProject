@@ -49,9 +49,10 @@ final class BetRepository(xa: Transactor[IO]):
         result match
           case Right(bets) => bets.asRight
           case Left(cause) => BetError.RepositoryFailure(cause).asLeft
-      }  
+      }
 
 object BetRepository:
+
   given doobie.Read[Bet] =
     doobie.Read[(UUID, UUID, BigDecimal, BigDecimal, java.time.Instant)]
       .map((id, eventId, stake, odds, createdAt) => Bet(id, eventId, stake, odds, createdAt))

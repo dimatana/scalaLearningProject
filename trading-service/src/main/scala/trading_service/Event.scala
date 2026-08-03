@@ -1,4 +1,5 @@
 package trading_service
+
 import java.util.UUID
 
 case class Event(

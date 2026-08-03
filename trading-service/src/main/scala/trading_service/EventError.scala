@@ -6,6 +6,7 @@ sealed trait EventError:
   def message: String
 
 object EventError:
+
   case class NotFound(id: UUID) extends EventError:
     def message: String = s"Event $id not found"
 

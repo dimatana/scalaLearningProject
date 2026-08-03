@@ -7,7 +7,6 @@ import com.comcast.ip4s.*
 import doobie.hikari.HikariTransactor
 import org.flywaydb.core.Flyway
 import org.http4s.*
-import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
@@ -41,6 +40,7 @@ object Main extends IOApp.Simple:
       Flyway
         .configure()
         .dataSource(config.dbUrl, config.dbUser, config.dbPassword)
+        .baselineOnMigrate(true)
         .load()
         .migrate()
     }.void
@@ -78,7 +78,10 @@ object Main extends IOApp.Simple:
     makeTransactor(config).use { xa =>
       val repo = EventRepository(xa)
       val consumerStream = BetPlacedConsumer.stream(
-        config.kafkaBrokers, config.kafkaGroupId, config.kafkaTopic, repo
+        config.kafkaBrokers,
+        config.kafkaGroupId,
+        config.kafkaTopic,
+        repo
       )
       for
         _ <- runMigrations(config)
@@ -88,13 +91,13 @@ object Main extends IOApp.Simple:
         _ <- (
           consumerStream.compile.drain.background,
           EmberServerBuilder
-          .default[IO]
-          .withHost(host"0.0.0.0")
-          .withPort(Port.fromInt(config.httpPort).getOrElse(port"3001"))
-          .withHttpApp(httpApp)
-          .build
-          .evalTap(srv => summon[Logger[IO]].info(s"acquire: http server bound at ${srv.address}"))
-          .onFinalize(summon[Logger[IO]].info("release: http server"))
+            .default[IO]
+            .withHost(host"0.0.0.0")
+            .withPort(Port.fromInt(config.httpPort).getOrElse(port"3001"))
+            .withHttpApp(httpApp)
+            .build
+            .evalTap(srv => summon[Logger[IO]].info(s"acquire: http server bound at ${srv.address}"))
+            .onFinalize(summon[Logger[IO]].info("release: http server"))
         ).tupled.useForever
       yield ()
     }

@@ -2,6 +2,9 @@ import sbt.Keys.testFrameworks
 import sbtassembly.MergeStrategy
 
 ThisBuild / scalaVersion := "3.8.4"
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+ThisBuild / scalacOptions    ++= Seq("-Wunused:all")
 val http4sVersion = "0.23.30"
 val circeVersion  = "0.14.10"
 val fs2KafkaVersion = "3.5.1"
@@ -41,7 +44,10 @@ lazy val contracts = (project in file("contracts"))
   )
 
 lazy val betServiceGeneratedServer = (project in file("bet-service/generated/server"))
+  .disablePlugins(ScalafixPlugin)
   .settings(
+    semanticdbEnabled := false,
+    scalacOptions     := Seq.empty,
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-effect"  % "3.5.7",
       "org.http4s"     %% "http4s-dsl"    % http4sVersion,
@@ -55,6 +61,7 @@ lazy val betServiceGeneratedServer = (project in file("bet-service/generated/ser
     )
   )
 lazy val betService = (project in file("bet-service"))
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(contracts, betServiceGeneratedServer)
   .aggregate(betServiceGeneratedServer)
   .settings(
@@ -77,7 +84,10 @@ lazy val betService = (project in file("bet-service"))
     }
   )
 lazy val tradingServiceGeneratedServer = (project in file("trading-service/generated/server"))
+  .disablePlugins(ScalafixPlugin)
   .settings(
+    semanticdbEnabled := false,
+    scalacOptions     := Seq.empty,
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-effect"  % "3.5.7",
       "org.http4s"     %% "http4s-dsl"    % http4sVersion,
@@ -94,6 +104,7 @@ lazy val tradingServiceGeneratedServer = (project in file("trading-service/gener
 lazy val tradingServiceGeneratedClient = (project in file("trading-service/generated/client"))
 
 lazy val tradingService = (project in file("trading-service"))
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(contracts, tradingServiceGeneratedServer)
   .aggregate(tradingServiceGeneratedServer)
   .settings(
