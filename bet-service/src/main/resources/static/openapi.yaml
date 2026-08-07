@@ -11,11 +11,6 @@ paths:
       responses:
         "200":
           description: ok
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: ok
 
   /bets:
     get:

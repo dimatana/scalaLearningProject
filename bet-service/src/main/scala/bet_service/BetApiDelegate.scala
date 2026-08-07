@@ -37,12 +37,15 @@ final class BetApiDelegate(
 
   override def getBet: getBet = new getBet:
     def handle(req: Request[IO], id: java.util.UUID, responses: getBetResponses[IO]): IO[Response[IO]] =
-      repo.findById(id).flatMap:
-        case Right(bet) => responses.resp200(toGenBet(bet))
-        case Left(err) =>
-          ErrorMapping.toStatus(err) match
-            case Status.NotFound => responses.resp404(toGenError(err))
-            case _               => responses.resp500(toGenError(err))
+      for
+        result <- repo.findById(id)
+        response <- result match
+          case Right(bet) => responses.resp200(toGenBet(bet))
+          case Left(err) =>
+            ErrorMapping.toStatus(err) match
+              case Status.NotFound => responses.resp404(toGenError(err))
+              case _               => responses.resp500(toGenError(err))
+      yield response
 
   override def getHealth: getHealth = new getHealth:
     def handle(req: Request[IO], responses: getHealthResponses[IO]): IO[Response[IO]] =
@@ -50,9 +53,12 @@ final class BetApiDelegate(
 
   override def listBets: listBets = new listBets:
     def handle(req: Request[IO], responses: listBetsResponses[IO]): IO[Response[IO]] =
-      repo.findAll().flatMap:
-        case Right(bets) => responses.resp200(bets.map(toGenBet))
-        case Left(err)   => responses.resp500(toGenError(err))
+      for
+        result <- repo.findAll()
+        response <- result match
+          case Right(bets) => responses.resp200(bets.map(toGenBet))
+          case Left(err)   => responses.resp500(toGenError(err))
+      yield response
 
   override def placeBet: placeBet = new placeBet:
     def handle(
@@ -60,17 +66,23 @@ final class BetApiDelegate(
       placeBetIO: IO[GenPlaceBetRequest],
       responses: placeBetResponses[IO]
     ): IO[Response[IO]] =
-      placeBetIO.attempt.flatMap:
-        case Left(_) =>
-          responses.resp422(GenErrorResponse(error = "invalid request body"))
-        case Right(body) =>
-          Bet.create(body.eventUnderscoreid, BigDecimal(body.stake), BigDecimal(body.odds)) match
-            case Left(err) =>
-              ErrorMapping.toStatus(err) match
-                case Status.UnprocessableEntity => responses.resp422(toGenError(err))
-                case _                          => responses.resp500(toGenError(err))
-            case Right(bet) =>
-              repo.insert(bet).flatMap:
-                case Left(err) => responses.resp500(toGenError(err))
-                case Right(saved) =>
-                  BetEventProducer.publish(producer, saved, betPlacedTopic) *> responses.resp201(toGenBet(saved))
+      for
+        decoded <- placeBetIO.attempt
+        response <- decoded match
+          case Left(_) =>
+            responses.resp422(GenErrorResponse(error = "invalid request body"))
+          case Right(body) =>
+            Bet.create(body.eventUnderscoreid, BigDecimal(body.stake), BigDecimal(body.odds)) match
+              case Left(err) =>
+                ErrorMapping.toStatus(err) match
+                  case Status.UnprocessableEntity => responses.resp422(toGenError(err))
+                  case _                          => responses.resp500(toGenError(err))
+              case Right(bet) =>
+                for
+                  inserted <- repo.insert(bet)
+                  insertedResponse <- inserted match
+                    case Left(err) => responses.resp500(toGenError(err))
+                    case Right(saved) =>
+                      BetEventProducer.publish(producer, saved, betPlacedTopic) *> responses.resp201(toGenBet(saved))
+                yield insertedResponse
+      yield response

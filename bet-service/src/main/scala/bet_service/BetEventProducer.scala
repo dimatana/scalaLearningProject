@@ -13,11 +13,13 @@ object BetEventProducer:
     ProducerSettings[IO, String, BetPlaced]
       .withBootstrapServers(brokers)
 
+  /** Builds a managed Kafka producer for bet events. */
   def make(brokers: String)(using logger: Logger[IO]): Resource[IO, KafkaProducer[IO, String, BetPlaced]] =
     KafkaProducer[IO].resource(producerSettings(brokers))
       .evalTap(_ => logger.info("acquire: kafka producer"))
       .onFinalize(logger.info("release: kafka producer"))
 
+  /** Publishes a BetPlaced event derived from a saved bet. */
   def publish(producer: KafkaProducer[IO, String, BetPlaced], bet: Bet, topic: String)(using
     logger: Logger[IO]
   ): IO[Unit] =

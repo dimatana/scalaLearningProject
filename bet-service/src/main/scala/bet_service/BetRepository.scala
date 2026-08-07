@@ -9,6 +9,7 @@ import java.util.UUID
 
 final class BetRepository(xa: Transactor[IO]):
 
+  /** Persists a bet and returns the saved value on success. */
   def insert(bet: Bet): IO[Either[BetError, Bet]] =
     sql"""
       INSERT INTO bets (id, event_id, stake, odds, created_at)
@@ -19,9 +20,10 @@ final class BetRepository(xa: Transactor[IO]):
       .map { result =>
         result match
           case Right(_)    => bet.asRight
-          case Left(cause) => BetError.RepositoryFailure(cause).asLeft
+          case Left(cause) => BetError.PersistenceFailure(cause).asLeft
       }
 
+  /** Finds a bet by id or returns a typed not-found error. */
   def findById(id: UUID): IO[Either[BetError, Bet]] =
     sql"""
       SELECT id, event_id, stake, odds, created_at
@@ -34,9 +36,10 @@ final class BetRepository(xa: Transactor[IO]):
         result match
           case Right(Some(bet)) => bet.asRight
           case Right(None)      => BetError.NotFound(id).asLeft
-          case Left(cause)      => BetError.RepositoryFailure(cause).asLeft
+          case Left(cause)      => BetError.PersistenceFailure(cause).asLeft
       }
 
+  /** Returns all bets ordered by creation timestamp descending. */
   def findAll(): IO[Either[BetError, List[Bet]]] =
     sql"""
       SELECT id, event_id, stake, odds, created_at
@@ -48,7 +51,7 @@ final class BetRepository(xa: Transactor[IO]):
       .map { result =>
         result match
           case Right(bets) => bets.asRight
-          case Left(cause) => BetError.RepositoryFailure(cause).asLeft
+          case Left(cause) => BetError.PersistenceFailure(cause).asLeft
       }
 
 object BetRepository:

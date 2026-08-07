@@ -20,5 +20,6 @@ final case class AppConfig(
 
 object AppConfig:
 
+  /** Loads service configuration from the default PureConfig sources. */
   def load(): AppConfig =
     pureconfig.ConfigSource.default.loadOrThrow[AppConfig]

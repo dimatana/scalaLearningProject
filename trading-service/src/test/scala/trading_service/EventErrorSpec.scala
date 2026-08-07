@@ -9,10 +9,10 @@ class EventErrorSpec extends FunSuite:
     val id = UUID.fromString("22222222-2222-2222-2222-222222222222")
     assert(EventError.NotFound(id).message.contains(id.toString))
 
-  test("RepositoryFailure.message contains the cause message"):
+  test("PersistenceFailure.message contains the cause message"):
     val cause = new RuntimeException("db timeout")
-    assert(EventError.RepositoryFailure(cause).message.contains("db timeout"))
+    assert(EventError.PersistenceFailure(cause).message.contains("db timeout"))
 
-  test("RepositoryFailure with null cause message does not throw"):
+  test("PersistenceFailure with null cause message does not throw"):
     val cause = new RuntimeException(null.asInstanceOf[String])
-    assert(EventError.RepositoryFailure(cause).message.nonEmpty)
+    assert(EventError.PersistenceFailure(cause).message.nonEmpty)

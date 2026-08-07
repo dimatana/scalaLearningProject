@@ -18,8 +18,8 @@ class ErrorMappingSpec extends FunSuite:
       Status.UnprocessableEntity
     )
 
-  test("RepositoryFailure maps to 500"):
+  test("PersistenceFailure maps to 500"):
     assertEquals(
-      ErrorMapping.toStatus(BetError.RepositoryFailure(new RuntimeException("db timeout"))),
+      ErrorMapping.toStatus(BetError.PersistenceFailure(new RuntimeException("db timeout"))),
       Status.InternalServerError
     )

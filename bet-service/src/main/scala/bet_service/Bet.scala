@@ -16,6 +16,7 @@ final case class Bet(
 object Bet:
   given Encoder[Bet] = deriveEncoder
 
+  /** Validates input values and creates a new bet. */
   def create(eventId: UUID, stake: BigDecimal, odds: BigDecimal): Either[BetError, Bet] =
     for
       validStake <- Either.cond(stake > 0, stake, BetError.InvalidStake("stake must be positive"))

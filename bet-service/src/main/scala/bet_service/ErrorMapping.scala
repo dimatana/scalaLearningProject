@@ -4,8 +4,9 @@ import org.http4s.Status
 
 object ErrorMapping:
 
+  /** Converts domain errors to HTTP status codes. */
   def toStatus(e: BetError): Status = e match
-    case BetError.NotFound(_)          => Status.NotFound
-    case BetError.InvalidStake(_)      => Status.UnprocessableEntity
-    case BetError.InvalidOdds(_)       => Status.UnprocessableEntity
-    case BetError.RepositoryFailure(_) => Status.InternalServerError
+    case BetError.NotFound(_)           => Status.NotFound
+    case BetError.InvalidStake(_)       => Status.UnprocessableEntity
+    case BetError.InvalidOdds(_)        => Status.UnprocessableEntity
+    case BetError.PersistenceFailure(_) => Status.InternalServerError

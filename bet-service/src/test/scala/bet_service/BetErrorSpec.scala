@@ -17,10 +17,10 @@ class BetErrorSpec extends FunSuite:
     val reason = "odds must be greater than 1.0"
     assert(BetError.InvalidOdds(reason).message.contains(reason))
 
-  test("RepositoryFailure.message contains the cause message"):
+  test("PersistenceFailure.message contains the cause message"):
     val cause = new RuntimeException("connection refused")
-    assert(BetError.RepositoryFailure(cause).message.contains("connection refused"))
+    assert(BetError.PersistenceFailure(cause).message.contains("connection refused"))
 
-  test("RepositoryFailure with null cause message does not throw"):
+  test("PersistenceFailure with null cause message does not throw"):
     val cause = new RuntimeException(null.asInstanceOf[String])
-    assert(BetError.RepositoryFailure(cause).message.nonEmpty)
+    assert(BetError.PersistenceFailure(cause).message.nonEmpty)

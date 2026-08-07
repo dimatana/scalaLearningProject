@@ -12,7 +12,7 @@ class RecordDecoderSpec extends FunSuite:
       s"""{"betId":"${UUID.randomUUID()}","eventId":"$eventId","stake":10.5,"odds":1.85,"occurredAt":"2026-07-30T10:00:00Z"}"""
         .getBytes("UTF-8")
 
-    RecordDecoder.decodeRecord(json) match
+    RecordDecoder.decodeRecord(Some(json)) match
       case Right(bp) => assertEquals(bp.eventId, eventId)
       case Left(err) => fail(s"expected Right, got Left($err)")
   }
@@ -20,15 +20,15 @@ class RecordDecoderSpec extends FunSuite:
   test("malformed JSON returns Left(InvalidJson)") {
     val bytes = """{"eventId": "not-closed""".getBytes("UTF-8")
 
-    RecordDecoder.decodeRecord(bytes) match
+    RecordDecoder.decodeRecord(Some(bytes)) match
       case Left(_: DecodeError.InvalidJson) => ()
       case other                            => fail(s"expected Left(InvalidJson), got $other")
   }
 
   test("empty payload returns Left(EmptyPayload)") {
-    assertEquals(RecordDecoder.decodeRecord(Array.emptyByteArray), Left(DecodeError.EmptyPayload))
+    assertEquals(RecordDecoder.decodeRecord(Some(Array.emptyByteArray)), Left(DecodeError.EmptyPayload))
   }
 
-  test("null payload returns Left(EmptyPayload)") {
-    assertEquals(RecordDecoder.decodeRecord(null), Left(DecodeError.EmptyPayload))
+  test("missing payload returns Left(MissingPayload)") {
+    assertEquals(RecordDecoder.decodeRecord(None), Left(DecodeError.MissingPayload))
   }
